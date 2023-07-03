@@ -1,0 +1,62 @@
+- name: "Install nginx"
+  hosts: web
+  become: true
+  vars: 
+    dns_server: 8.8.8.8 
+  tasks:
+  - name: "Add dns server"
+    lineinfile:
+      path: /etc/resolv.conf
+      line: 'nameserver {{ dns_server }}'
+
+  - name: "create user list"
+    user: name={{ item }} state=present
+    loop: 
+      - user1
+      - user2
+      - user3
+
+  - name: "apt update"
+    apt: 
+      update_cache: yes
+      cache_valid_time: 3600
+
+  - name: "install nginx"
+    apt:
+      name: "nginx"
+      state: present
+
+  - name: "create www directory"
+    file:
+      path: /var/www/{{ domain }}
+      state: directory
+      mode: '0755'
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+
+  - name: "copy index.html"
+    copy:
+      src: index.html
+      dest: /var/www/{{ domain }}/index.html
+      mode: '0755'
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+
+  - name: "delete default nginx site"
+    file:
+      path: /etc/nginx/sites-enabled/default
+      state: absent
+
+  - name: "copy nginx site.conf"
+    template:
+      src: site.conf.j2
+      dest: /etc/nginx/sites-enabled/{{ domain }}
+      owner: root
+      group: root
+      mode: '0644'
+  
+  - name: restart nginx
+    service:
+      name: nginx
+      state: restarted
+  
